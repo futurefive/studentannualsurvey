@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Annual Survey</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6fa;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    /* ---- Token gate ---- */
+    #token-gate {
+      position: fixed;
+      inset: 0;
+      background: #f5f6fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    #token-gate.hidden { display: none; }
+
+    .token-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+      padding: 40px 48px;
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .token-card h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #1a3a5c;
+    }
+    .token-card p {
+      font-size: 0.85rem;
+      color: #666;
+      line-height: 1.5;
+      margin-top: -8px;
+    }
+    .token-card label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #666;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .token-card input {
+      padding: 10px 14px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: #1a1a2e;
+      width: 100%;
+    }
+    .token-card input:focus { outline: 2px solid #1a3a5c; border-color: transparent; }
+    .token-card button {
+      padding: 11px;
+      background: #1a3a5c;
+      color: white;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .token-card button:hover { background: #224d7a; }
+    #token-error {
+      font-size: 0.82rem;
+      color: #c0392b;
+      display: none;
+    }
+    #token-error.visible { display: block; }
+
+    /* ---- Header ---- */
+    header {
+      background: #1a3a5c;
+      color: white;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 600; }
+    header .subtitle { font-size: 0.85rem; opacity: 0.7; margin-top: 2px; }
+
+    /* ---- Mode toggle ---- */
+    .mode-toggle {
+      display: flex;
+      background: rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .mode-toggle button {
+      padding: 7px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      transition: background 0.15s, color 0.15s;
+    }
+    .mode-toggle button.active {
+      background: white;
+      color: #1a3a5c;
+    }
+    .mode-toggle button:not(.active):hover {
+      background: rgba(255,255,255,0.15);
+      color: white;
+    }
+
+    /* ---- Status bar ---- */
+    #status-bar {
+      background: #e8f0fe;
+      border-bottom: 1px solid #c5d5f0;
+      padding: 10px 32px;
+      font-size: 0.82rem;
+      color: #3a5a8c;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #status-bar .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid #3a5a8c;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    #status-bar.loading .spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- Controls ---- */
+    .controls {
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 20px 32px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-end;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 180px;
+    }
+    .control-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #666;
+    }
+    .control-group select {
+      padding: 8px 12px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: white;
+      color: #1a1a2e;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    .control-group select:focus { outline: 2px solid #1a3a5c; border-color: transparent; }
+    .control-group select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .question-group { flex: 1; min-width: 320px; }
+    .question-group select { width: 100%; }
+
+    #reset-btn {
+      padding: 8px 16px;
+      background: #f0f0f0;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: #444;
+      align-self: flex-end;
+    }
+    #reset-btn:hover { background: #e4e4e4; }
+
+    /* ---- Shared empty state ---- */
+    .empty-state {
+      text-align: center;
+      padding: 60px 32px;
+      color: #999;
+    }
+    .empty-state p { font-size: 1rem; }
+    .empty-state small { font-size: 0.82rem; }
+
+    /* ---- Charts view ---- */
+    #charts-view { display: none; }
+    #charts-view.active { display: block; }
+
+    .chart-area {
+      padding: 32px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    #chart-wrapper {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 28px 32px;
+      display: none;
+    }
+    #chart-wrapper.visible { display: block; }
+
+    #chart-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1a3a5c;
+      margin-bottom: 6px;
+    }
+    #chart-meta {
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 24px;
+    }
+    #chart-canvas-container {
+      position: relative;
+      height: 420px;
+    }
+
+    .chart-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+    .chart-actions button {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: white;
+      color: #333;
+      transition: background 0.15s;
+    }
+    .chart-actions button:hover { background: #f0f4f8; }
+    .chart-actions button svg { flex-shrink: 0; }
+    #copy-feedback {
+      font-size: 0.8rem;
+      color: #2e7d32;
+      align-self: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #copy-feedback.show { opacity: 1; }
+
+    /* ---- Text view ---- */
+    #text-view { display: none; }
+    #text-view.active { display: block; }
+
+    .results-area {
+      padding: 32px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    #results-wrapper { display: none; }
+    #results-wrapper.visible { display: block; }
+
+    #results-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1a3a5c;
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+    #results-meta {
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 20px;
+    }
+
+    #response-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .response-card {
+      background: white;
+      border-radius: 8px;
+      padding: 14px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: #2a2a3e;
+      border-left: 3px solid #2e6da4;
+    }
+    .response-number {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Token gate overlay -->
+<div id="token-gate">
+  <div class="token-card">
+    <h2>Student Annual Survey</h2>
+    <p>Enter the password to unlock the application. Your session will remain open until you close the tab.</p>
+    <label>
+      Password
+      <input id="token-input" type="password" placeholder="Enter password…" autocomplete="off" />
+    </label>
+    <div id="token-error">Incorrect password — please try again.</div>
+    <button id="token-submit">Unlock</button>
+  </div>
+</div>
+
+<header>
+  <img src="https://futurefive.org/wp-content/uploads/2025/02/future-5-new-logo.png" alt="future 4 logo" style="height:48px;width:auto;flex-shrink:0;" />
+  <div>
+    <h1>Student Annual Survey</h1>
+    <div class="subtitle">Future 5 — Response Analysis</div>
+  </div>
+  <div class="mode-toggle">
+    <button id="btn-charts" class="active" onclick="setMode('charts')">Charts</button>
+    <button id="btn-text" onclick="setMode('text')">Text Responses</button>
+  </div>
+</header>
+
+<div id="status-bar">
+  <div class="spinner"></div>
+  <span id="status-text">Initializing…</span>
+</div>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Academic Year</label>
+    <select id="filter-year" disabled>
+      <option value="">All Years</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>HS or College</label>
+    <select id="filter-hsc" disabled>
+      <option value="">All</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>Grade Level</label>
+    <select id="filter-grade" disabled>
+      <option value="">All Grades</option>
+    </select>
+  </div>
+  <div class="control-group question-group">
+    <label>Survey Question</label>
+    <select id="select-question" disabled>
+      <option value="">— Select a question —</option>
+    </select>
+  </div>
+  <button id="reset-btn">Reset Filters</button>
+</div>
+
+<!-- Charts view -->
+<div id="charts-view" class="active">
+  <div class="chart-area">
+    <div class="empty-state" id="chart-empty">
+      <p>Select a survey question above to view results.</p>
+      <small>Use the filters to narrow responses by year, school type, or grade.</small>
+    </div>
+    <div id="chart-wrapper">
+      <div id="chart-title"></div>
+      <div id="chart-meta"></div>
+      <div id="chart-canvas-container">
+        <canvas id="chart-canvas"></canvas>
+      </div>
+      <div class="chart-actions">
+        <span id="copy-feedback">Copied!</span>
+        <button id="btn-copy-image">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy Image
+        </button>
+        <button id="btn-export-pptx">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export to PPTX
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Text view -->
+<div id="text-view">
+  <div class="results-area">
+    <div class="empty-state" id="text-empty">
+      <p>Select a survey question above to view open responses.</p>
+      <small>Use the filters to narrow responses by year, school type, or grade.</small>
+    </div>
+    <div id="results-wrapper">
+      <div id="results-title"></div>
+      <div id="results-meta"></div>
+      <div id="response-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Credentials encrypted with AES-GCM, PBKDF2 key derivation, 200k iterations
+const ENCRYPTED_BLOB = '8/p6eMtg6KYlDu2XGroTfn2UycNm3J6vC3QuFmznJ/cfMyBCIb1Ww9hH7fD5M9je+t7eKFuImndEMvOXkHR1YvW8GdN8nxyP4lz1IL1O+DrClldrSvbQ8XwFJD0Fk5WzKzG4vSyn1Wj/7A9wMUkUuhRY+wmui6o/IcbKxH1t+5DQM5Cfh/tSk9nLtoTixhLb71BEI4C+SAuKkCS7g+EiNogZ042UFfKlBzTVFybHPL09Z4VBo3doXAYgGMvcRGUy3JFiLA4=';
+
+let TOKEN = '', BASE_ID = '', TABLE_ID = '';
+
+async function decryptCredentials(password) {
+  const enc = new TextEncoder();
+  const combined  = Uint8Array.from(atob(ENCRYPTED_BLOB), c => c.charCodeAt(0));
+  const salt      = combined.slice(0, 16);
+  const iv        = combined.slice(16, 28);
+  const ciphertext = combined.slice(28);
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+  return JSON.parse(new TextDecoder().decode(plaintext));
+}
+
+// ---- Password gate ----
+const tokenGate   = document.getElementById('token-gate');
+const tokenInput  = document.getElementById('token-input');
+const tokenSubmit = document.getElementById('token-submit');
+const tokenError  = document.getElementById('token-error');
+
+async function submitPassword() {
+  const password = tokenInput.value;
+  if (!password) return;
+  try {
+    const creds = await decryptCredentials(password);
+    TOKEN    = creds.token;
+    BASE_ID  = creds.baseId;
+    TABLE_ID = creds.tableId;
+    sessionStorage.setItem('survey_creds', JSON.stringify(creds));
+    tokenGate.classList.add('hidden');
+    init();
+  } catch {
+    tokenError.classList.add('visible');
+    tokenInput.focus();
+  }
+}
+
+tokenSubmit.addEventListener('click', submitPassword);
+tokenInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitPassword(); });
+
+// Resume session if already unlocked this tab
+const stored = sessionStorage.getItem('survey_creds');
+if (stored) {
+  try {
+    const creds = JSON.parse(stored);
+    TOKEN = creds.token; BASE_ID = creds.baseId; TABLE_ID = creds.tableId;
+    tokenGate.classList.add('hidden');
+  } catch { sessionStorage.removeItem('survey_creds'); }
+}
+
+// ---- Field definitions ----
+
+const EXCLUDE_FIELDS = new Set([
+  'Name', 'Created By', 'Created Date', 'link_Contacts',
+  'xOld: Grade', 'xOld: Wave', 'XOldPandemic',
+  'Academic Year', 'General: HS or College', 'General: Grade Level',
+  'General: Completed Survey', 'General: Date of Birth Validation',
+  'Goals: Adult connections',
+  // All text fields (handled in text view)
+  'Academics: checkin-no', 'Academics: why not?',
+  'College Success: major', 'College Success: Grad date',
+  'College Success: Internship where',
+  'College Success: Working', 'College Success: Job how',
+  'College Success: More engaged', 'College Success: Feedback',
+  'Community: favorites', 'Community: Suggestions',
+  'F5 Future 5 is',
+  'Next Track: One question', 'Next Track: What additional info',
+  'Wellness: Enjoy', 'Wellness: Activities', 'Wellness: why connected',
+  'Seniors: What would make you more engaged with Future 5\'s College Success program?',
+  'Other: Anything else?',
+]);
+
+const CHART_FIELD_LABELS = {
+  'Academics: checkin?': 'If you were contacted about Academic Check-in with staff, were you able to attend?',
+  'Academics: checkin-yes': "The academic check-in's helped me stay on track and improve my grades.",
+  'Academics: Awareness': 'Which of the following academic support programs have you participated in at Future 5?',
+  'Academics: engagement': 'How often did you use Future 5 Academic support?',
+  'Academics: results': 'Did the Academic Support help improve your grades?',
+  'Academics: Upchieve': 'Have you used UPchieve (the free online tutoring program provided by Future 5)?',
+  'Academics: Upchieve use': 'What best describes your experience with UPchieve?',
+  'College Success: Getting into college': 'Future 5 helped me land with a plan (e.g. college, trade, military, etc)',
+  'College Success: Prepared': 'I feel better prepared for success in college.',
+  'College Success: Current College': 'What college or university did you attend in this latest term?',
+  'College Success: Grad date': 'What is your expected graduation date?',
+  'College Success: Internships': 'Have you had any internships this year?',
+  'College Success: Internship how': 'How did you find it? (internship)',
+  'College Success: Job?': 'If you have graduated recently, do you have a job?',
+  'College Success: Job how': 'How did you find it? (job)',
+  'Community: Helped Grow': 'Do you feel that participating in community service helped you grow in any of these areas?',
+  'Community: Leadership?': 'Would you be interested in helping lead or promote service projects next year?',
+  'Community: No Participation': 'What were the main reasons that you could not participate? (community service)',
+  'Community: Participation': 'Did you participate in any community service events this year?',
+  'Community: Type of Service': 'What kinds of service projects are most interesting to you?',
+  'F5 Has my back': 'Future 5 has my back',
+  'F5 Helping to Achieve': 'Future 5 is helping me achieve my goals',
+  'F5 Participation': 'At Future 5, which have you participated the most in?',
+  'F5 Program Participation': 'At Future 5, which have you participated the most in? (previous)',
+  'F5 Program Participation 2': 'What would make you come to Future 5 more often?',
+  'F5: Academic support': 'Did you use Future 5 academic support?',
+  'F5: Caring staff': 'The Future 5 staff members care about me',
+  'F5: Feel part of F5': 'I am strongly connected to Future 5',
+  'F5: Net promoter': 'I would recommend Future 5 to a friend.',
+  'F5: Resources to succeed': 'Future 5 provides the resources I need to succeed',
+  'Goals: Academic': 'I know how to search out academic support when I need it.',
+  'Goals: Better prepared': 'I am better prepared for success in school and beyond.',
+  'Goals: Clearer goals': 'I have expanded my personal network.',
+  'Goals: Connect to students': 'Future 5 helped me stay motivated during the school year.',
+  'Goals: Connected to adults': 'I feel more connected to adults who care about me.',
+  'Goals: Connected to Community': 'I feel connected to a community that wants me to succeed.',
+  'Goals: Control of future': 'I feel more in control of my future.',
+  'Goals: Expanded my network': 'Over the past year, I have expanded my network of connections.',
+  'Goals: How to ask for help': 'I feel comfortable asking Future 5 for help when I need it.',
+  'Goals: Motivated': 'I am more motivated to achieve my goals.',
+  'Goals: No participation': 'What were the main reasons that you could not participate more often?',
+  'Goals: Self-confidence': 'I have more self-confidence.',
+  'Job Prep: Awareness': 'Which of the following Future 5 Job Prep sessions are you aware of?',
+  'Job prep: Interest': 'Would you be interested in participating in Job Prep during the upcoming school year?',
+  'Job Prep: Participation': 'Did you participate in the Job Prep (Next Level) program this year?',
+  'Next Track: Awareness': 'Before today, were you aware of the Next Track options (such as trades, military, or certificate programs)?',
+  'Next Track: How to learn more': 'How would you prefer to learn more about Next Track options?',
+  'Next Track: Most interested': 'Which Next Track paths are you most interested in learning more about?',
+  'Wellness: Activities': 'What kind of wellness activities would you like us to offer next year?',
+  'wellness: connected': 'How connected do you feel to the Future 5 community through Health and Wellness activities?',
+  'Wellness: Participation': 'Did you participate in any Health & Wellness activities this year?',
+  'Academics: More awareness': 'Which of the following would help you become more aware of our resources?',
+  'College Success: self-learning': 'Compared to 1 year ago…',
+  'College Success: Check-in topics': 'What topics came up most often during your check-ins?',
+  'College Success: Internship how': 'How did you find your internship?',
+  'Goals: frequency': 'How often did you participate in Future 5 workshops?',
+};
+
+const TEXT_FIELDS = [
+  { field: 'Academics: checkin-no',       label: 'If you were not able to attend an Academic Check-in, please tell us what prevented you from attending.' },
+  { field: 'Academics: why not?',         label: 'If you did not make use of Academic Support, please tell us why.' },
+  { field: 'College Success: major',      label: 'What is your major?' },
+  { field: 'College Success: Grad date',  label: 'What is your expected graduation date?' },
+  { field: 'College Success: Internship where', label: 'What is the name of the firm where you interned, and what was your role?' },
+  { field: 'College Success: Working',    label: 'Where are you working?' },
+  { field: 'College Success: Job how',    label: 'How did you find your job?' },
+  { field: 'College Success: More engaged', label: "What would make you more engaged with Future 5's College Success program?" },
+  { field: 'College Success: Feedback',   label: 'Any other feedback about the College Success program?' },
+  { field: 'Community: favorites',        label: 'Please name service projects or community service initiatives that felt most meaningful to you — and why.' },
+  { field: 'Community: Suggestions',      label: 'What would you suggest to improve community service programming next year?' },
+  { field: 'F5 Future 5 is',             label: 'In a few words, tell us what Future 5 means to you.' },
+  { field: 'Next Track: One question',    label: "What's one question or concern you have about life after high school that you'd like help answering?" },
+  { field: 'Next Track: What additional info', label: 'What additional information would be helpful about post-high school options?' },
+  { field: 'Wellness: Enjoy',             label: 'What wellness activities did you enjoy? Share one sentence describing your experience.' },
+  { field: 'Wellness: Activities',        label: 'What kind of wellness activities would you like us to offer next year?' },
+  { field: 'Wellness: why connected',     label: 'What about the Health & Wellness activities make you feel connected, or not connected?' },
+  { field: 'Seniors: What would make you more engaged with Future 5\'s College Success program?',
+                                          label: "What would make you more engaged with Future 5's College Success program? (Seniors)" },
+  { field: 'Other: Anything else?',       label: "Is there anything else you'd like to share?" },
+];
+
+// ---- Likert sort order ----
+const LIKERT_ORDER = ['strongly disagree', 'disagree', 'neutral', 'agree', 'strongly agree'];
+const LIKERT_SET   = new Set(LIKERT_ORDER);
+
+// ---- State ----
+let allRecords   = [];
+let chartInstance = null;
+let currentMode  = 'charts';
+
+// ---- DOM refs ----
+const filterYear   = document.getElementById('filter-year');
+const filterHSC    = document.getElementById('filter-hsc');
+const filterGrade  = document.getElementById('filter-grade');
+const selectQ      = document.getElementById('select-question');
+const statusBar    = document.getElementById('status-bar');
+const statusText   = document.getElementById('status-text');
+const resetBtn     = document.getElementById('reset-btn');
+const chartsView   = document.getElementById('charts-view');
+const textView     = document.getElementById('text-view');
+const btnCharts    = document.getElementById('btn-charts');
+const btnText      = document.getElementById('btn-text');
+
+// Chart refs
+const chartWrapper  = document.getElementById('chart-wrapper');
+const chartEmpty    = document.getElementById('chart-empty');
+const chartTitle    = document.getElementById('chart-title');
+const chartMeta     = document.getElementById('chart-meta');
+
+// Text refs
+const textEmpty      = document.getElementById('text-empty');
+const resultsWrapper = document.getElementById('results-wrapper');
+const resultsTitle   = document.getElementById('results-title');
+const resultsMeta    = document.getElementById('results-meta');
+const responseList   = document.getElementById('response-list');
+
+// ---- Helpers ----
+function setStatus(msg, loading = false) {
+  statusText.textContent = msg;
+  statusBar.classList.toggle('loading', loading);
+}
+
+function getFilteredRecords() {
+  const year  = filterYear.value;
+  const hsc   = filterHSC.value;
+  const grade = filterGrade.value;
+  return allRecords.filter(r => {
+    const f = r.fields;
+    if (year  && f['Academic Year'] !== year)                               return false;
+    if (hsc   && f['General: HS or College'] !== hsc)                       return false;
+    if (grade && (f['General: Grade Level'] || '').trim() !== grade.trim()) return false;
+    return true;
+  });
+}
+
+function filterDescription() {
+  const parts = [];
+  if (filterYear.value)  parts.push(filterYear.value);
+  if (filterHSC.value)   parts.push(filterHSC.value);
+  if (filterGrade.value) parts.push(filterGrade.value);
+  return parts.length ? ` · Filtered: ${parts.join(', ')}` : '';
+}
+
+// ---- Mode switching ----
+function setMode(mode) {
+  currentMode = mode;
+  btnCharts.classList.toggle('active', mode === 'charts');
+  btnText.classList.toggle('active', mode === 'text');
+  chartsView.classList.toggle('active', mode === 'charts');
+  textView.classList.toggle('active', mode === 'text');
+
+  // Rebuild the question dropdown for the new mode
+  rebuildQuestionDropdown();
+  render();
+}
+
+// ---- Populate question dropdown ----
+function rebuildQuestionDropdown() {
+  // Clear existing options beyond the placeholder
+  selectQ.innerHTML = '<option value="">— Select a question —</option>';
+
+  const presentFields = new Set();
+  allRecords.forEach(r => Object.keys(r.fields).forEach(k => presentFields.add(k)));
+
+  if (currentMode === 'charts') {
+    // All non-excluded fields, grouped by prefix
+    const questions = [...presentFields]
+      .filter(f => !EXCLUDE_FIELDS.has(f))
+      .sort();
+
+    const groups = {};
+    questions.forEach(q => {
+      const prefix = q.includes(':') ? q.split(':')[0].trim() : 'Other';
+      if (!groups[prefix]) groups[prefix] = [];
+      groups[prefix].push(q);
+    });
+
+    Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).forEach(([group, qs]) => {
+      const og = document.createElement('optgroup');
+      og.label = group;
+      qs.forEach(q => {
+        const opt = document.createElement('option');
+        opt.value = q;
+        opt.textContent = CHART_FIELD_LABELS[q] || (q.includes(':') ? q.split(':').slice(1).join(':').trim() : q);
+        og.appendChild(opt);
+      });
+      selectQ.appendChild(og);
+    });
+
+  } else {
+    // Only text fields present in the dataset, grouped by prefix
+    const available = TEXT_FIELDS.filter(({ field }) => presentFields.has(field));
+
+    const groups = {};
+    available.forEach(({ field, label }) => {
+      const prefix = field.includes(':') ? field.split(':')[0].trim() : 'Other';
+      const group = { 'Academic': 'Academics', 'Academics': 'Academics', 'College Success': 'College Success',
+                      'Community': 'Community', 'F5': 'Future 5', 'Goals': 'Goals',
+                      'Next Track': 'Next Track', 'Wellness': 'Wellness', 'wellness': 'Wellness',
+                      'Seniors': 'Seniors', 'Other': 'Other' }[prefix] || prefix;
+      if (!groups[group]) groups[group] = [];
+      groups[group].push({ field, label });
+    });
+
+    Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).forEach(([group, items]) => {
+      const og = document.createElement('optgroup');
+      og.label = group;
+      items.forEach(({ field, label }) => {
+        const opt = document.createElement('option');
+        opt.value = field;
+        opt.textContent = label;
+        og.appendChild(opt);
+      });
+      selectQ.appendChild(og);
+    });
+  }
+}
+
+// ---- Render dispatcher ----
+function render() {
+  if (currentMode === 'charts') renderChart();
+  else renderText();
+}
+
+// ---- Chart rendering ----
+function countResponses(records, field) {
+  const counts = {};
+  let responded = 0;
+  records.forEach(r => {
+    const val = r.fields[field];
+    if (val === undefined || val === null || val === '') return;
+    const values = Array.isArray(val) ? val : [val];
+    if (values.length) responded++;
+    values.forEach(v => { const k = String(v).trim(); counts[k] = (counts[k] || 0) + 1; });
+  });
+  return { counts, responded };
+}
+
+function sortedKeys(counts) {
+  const keys = Object.keys(counts);
+  const lower = keys.map(k => k.toLowerCase());
+  if (lower.every(k => LIKERT_SET.has(k) || k === 'n/a')) {
+    return keys.sort((a, b) => {
+      const ia = LIKERT_ORDER.indexOf(a.toLowerCase());
+      const ib = LIKERT_ORDER.indexOf(b.toLowerCase());
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+  }
+  if (keys.every(k => ['yes', 'no'].includes(k.toLowerCase()))) {
+    return keys.sort((a, b) => (b.toLowerCase() === 'yes' ? 1 : -1));
+  }
+  return keys.sort((a, b) => counts[b] - counts[a]);
+}
+
+function renderChart() {
+  const field = selectQ.value;
+  if (!field) {
+    chartWrapper.classList.remove('visible');
+    chartEmpty.style.display = '';
+    chartEmpty.querySelector('p').textContent = 'Select a survey question above to view results.';
+    return;
+  }
+
+  const filtered = getFilteredRecords();
+  const { counts, responded } = countResponses(filtered, field);
+
+  if (Object.keys(counts).length === 0) {
+    chartWrapper.classList.remove('visible');
+    chartEmpty.style.display = '';
+    chartEmpty.querySelector('p').textContent = 'No responses found for the current filters.';
+    return;
+  }
+
+  chartEmpty.style.display = 'none';
+  chartWrapper.classList.add('visible');
+
+  const keys   = sortedKeys(counts);
+  const values = keys.map(k => counts[k]);
+
+  chartTitle.textContent = CHART_FIELD_LABELS[field] || field;
+  chartMeta.textContent  = `${responded} of ${filtered.length} respondents answered${filterDescription()}`;
+
+  const palette = ['#1a3a5c','#2e6da4','#4a9fd4','#6cbde8','#9dd3f0','#c0e5f9','#d4eef9','#e8f5fd'];
+  const colors  = keys.map((_, i) => palette[i % palette.length]);
+
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(
+    document.getElementById('chart-canvas').getContext('2d'),
+    {
+      type: 'bar',
+      data: {
+        labels: keys,
+        datasets: [{
+          label: 'Responses',
+          data: values,
+          backgroundColor: colors,
+          borderWidth: 0,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const pct = responded > 0 ? ((ctx.parsed.y / responded) * 100).toFixed(1) : 0;
+                return ` ${ctx.parsed.y} responses (${pct}%)`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { maxRotation: 35, font: { size: 12 }, color: '#444' }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 12 }, color: '#666' }, grid: { color: '#f0f0f0' } }
+        }
+      }
+    }
+  );
+}
+
+// ---- Text rendering ----
+function renderText() {
+  const field = selectQ.value;
+  if (!field) {
+    resultsWrapper.classList.remove('visible');
+    textEmpty.style.display = '';
+    textEmpty.querySelector('p').textContent = 'Select a survey question above to view open responses.';
+    return;
+  }
+
+  const entry = TEXT_FIELDS.find(t => t.field === field);
+  const label = entry ? entry.label : field;
+
+  const filtered  = getFilteredRecords();
+  const responses = filtered
+    .map(r => r.fields[field])
+    .filter(v => v !== undefined && v !== null && String(v).trim() !== '');
+
+  if (responses.length === 0) {
+    resultsWrapper.classList.remove('visible');
+    textEmpty.style.display = '';
+    textEmpty.querySelector('p').textContent = 'No responses found for the current filters.';
+    return;
+  }
+
+  textEmpty.style.display = 'none';
+  resultsWrapper.classList.add('visible');
+
+  resultsTitle.textContent = label;
+  resultsMeta.textContent  = `${responses.length} response${responses.length !== 1 ? 's' : ''}${filterDescription()}`;
+
+  responseList.innerHTML = '';
+  responses.forEach((text, i) => {
+    const card = document.createElement('div');
+    card.className = 'response-card';
+    const num = document.createElement('div');
+    num.className = 'response-number';
+    num.textContent = `#${i + 1}`;
+    const body = document.createElement('div');
+    body.textContent = String(text).trim();
+    card.appendChild(num);
+    card.appendChild(body);
+    responseList.appendChild(card);
+  });
+}
+
+// ---- Fetch all records ----
+async function fetchAllRecords() {
+  setStatus('Loading records…', true);
+  const records = [];
+  let offset = null;
+  do {
+    const url = new URL(`https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}`);
+    url.searchParams.set('pageSize', '100');
+    if (offset) url.searchParams.set('offset', offset);
+    const resp = await fetch(url, { headers: { Authorization: `Bearer ${TOKEN}` } });
+    if (!resp.ok) throw new Error(`Airtable error: ${resp.status} ${resp.statusText}`);
+    const data = await resp.json();
+    records.push(...data.records);
+    offset = data.offset || null;
+    setStatus(`Loading records… (${records.length} so far)`, true);
+  } while (offset);
+  return records;
+}
+
+// ---- Populate filters ----
+function populateFilters(records) {
+  const years = new Set(), hscSet = new Set(), grades = new Set();
+  records.forEach(r => {
+    const f = r.fields;
+    if (f['Academic Year'])           years.add(f['Academic Year']);
+    if (f['General: HS or College'])  hscSet.add(f['General: HS or College']);
+    if (f['General: Grade Level'])    grades.add(f['General: Grade Level'].trim());
+  });
+
+  [...years].sort().reverse().forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    filterYear.appendChild(opt);
+  });
+  [...hscSet].sort().forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    filterHSC.appendChild(opt);
+  });
+  const gradeOrder = ['Freshmen', 'Sophomore', 'Junior', 'Senior'];
+  [...grades].sort((a, b) => {
+    const ia = gradeOrder.indexOf(a), ib = gradeOrder.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  }).forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    filterGrade.appendChild(opt);
+  });
+  [filterYear, filterHSC, filterGrade].forEach(s => s.disabled = false);
+}
+
+// ---- Event listeners ----
+[filterYear, filterHSC, filterGrade, selectQ].forEach(el => el.addEventListener('change', render));
+resetBtn.addEventListener('click', () => {
+  filterYear.value = '';
+  filterHSC.value  = '';
+  filterGrade.value = '';
+  render();
+});
+
+// ---- Init ----
+async function init() {
+  try {
+    allRecords = await fetchAllRecords();
+    populateFilters(allRecords);
+    rebuildQuestionDropdown();
+    selectQ.disabled = false;
+    setStatus(`Ready — ${allRecords.length} records loaded.`);
+  } catch (err) {
+    setStatus(`Error: ${err.message}`);
+    console.error(err);
+  }
+}
+
+// Auto-start if credentials were already unlocked this session
+if (TOKEN) init();
+
+// ---- Copy chart image to clipboard ----
+document.getElementById('btn-copy-image').addEventListener('click', async () => {
+  const canvas = document.getElementById('chart-canvas');
+  try {
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    const feedback = document.getElementById('copy-feedback');
+    feedback.classList.add('show');
+    setTimeout(() => feedback.classList.remove('show'), 2000);
+  } catch (err) {
+    alert('Copy failed — your browser may not support clipboard image writing. Try Export to PPTX instead.');
+  }
+});
+
+// ---- Export chart to PPTX ----
+document.getElementById('btn-export-pptx').addEventListener('click', () => {
+  const canvas = document.getElementById('chart-canvas');
+  const imageData = canvas.toDataURL('image/png');
+  const field = selectQ.value;
+  const title = (currentMode === 'charts' ? CHART_FIELD_LABELS[field] : field) || field;
+
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE'; // 13.33" x 7.5"
+
+  const slide = pptx.addSlide();
+
+  // Dark header bar
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0, y: 0, w: '100%', h: 1.1,
+    fill: { color: '1a3a5c' },
+  });
+
+  // Logo in header (logo is ~square: 499x500px, so w ≈ h)
+  slide.addImage({
+    path: 'https://futurefive.org/wp-content/uploads/2025/02/future-5-new-logo.png',
+    x: 0.3, y: 0.15, h: 0.8, w: 0.8,
+  });
+
+  // Slide title in header
+  slide.addText(title, {
+    x: 1.3, y: 0.1, w: 11.7, h: 0.9,
+    fontSize: 20, bold: true, color: 'FFFFFF',
+    valign: 'middle', wrap: true,
+  });
+
+  // Filter description
+  const filtered = getFilteredRecords();
+  const parts = [];
+  if (filterYear.value)  parts.push(filterYear.value);
+  if (filterHSC.value)   parts.push(filterHSC.value);
+  if (filterGrade.value) parts.push(filterGrade.value);
+  const filterDesc = parts.length ? `Filtered: ${parts.join(' · ')}` : `All respondents`;
+  const meta = `${filtered.length} respondents  ·  ${filterDesc}`;
+
+  slide.addText(meta, {
+    x: 0.3, y: 1.15, w: 12.7, h: 0.35,
+    fontSize: 10, color: '888888', italic: true,
+  });
+
+  // Chart image
+  slide.addImage({
+    data: imageData,
+    x: 0.3, y: 1.55, w: 12.73, h: 5.7,
+  });
+
+  const safeName = title.replace(/[^a-z0-9]/gi, '_').slice(0, 50);
+  pptx.writeFile({ fileName: `${safeName}.pptx` });
+});
+</script>
+</body>
+</html>
