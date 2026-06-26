@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student Annual Survey</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -71,7 +72,7 @@
     .token-card input:focus { outline: 2px solid #1a3a5c; border-color: transparent; }
     .token-card button {
       padding: 11px;
-      background: #1a3a5c;
+      background: #3296c3;
       color: white;
       border: none;
       border-radius: 7px;
@@ -89,7 +90,7 @@
 
     /* ---- Header ---- */
     header {
-      background: #1a3a5c;
+      background: #3296c3;
       color: white;
       padding: 18px 32px;
       display: flex;
@@ -333,6 +334,25 @@
       letter-spacing: 0.05em;
       margin-bottom: 4px;
     }
+
+    #results-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    #results-header > div { margin-bottom: 0; }
+    #btn-copy-responses {
+      flex-shrink: 0;
+      padding: 5px 14px;
+      font-size: 0.8rem;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #444;
+    }
+    #btn-copy-responses:hover { background: #f0f4f8; }
   </style>
 </head>
 <body>
@@ -432,8 +452,13 @@
       <small>Use the filters to narrow responses by year, school type, or grade.</small>
     </div>
     <div id="results-wrapper">
-      <div id="results-title"></div>
-      <div id="results-meta"></div>
+      <div id="results-header">
+        <div>
+          <div id="results-title"></div>
+          <div id="results-meta"></div>
+        </div>
+        <button id="btn-copy-responses">Copy responses</button>
+      </div>
       <div id="response-list"></div>
     </div>
   </div>
@@ -809,6 +834,7 @@ function renderChart() {
 
   if (chartInstance) chartInstance.destroy();
 
+  Chart.register(ChartDataLabels);
   chartInstance = new Chart(
     document.getElementById('chart-canvas').getContext('2d'),
     {
@@ -827,6 +853,13 @@ function renderChart() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
+          datalabels: {
+            anchor: 'center',
+            align: 'center',
+            color: '#ffffff',
+            font: { size: 12, weight: 'bold' },
+            formatter: value => value > 0 ? value : '',
+          },
           legend: { display: false },
           tooltip: {
             callbacks: {
@@ -876,6 +909,15 @@ function renderText() {
 
   resultsTitle.textContent = label;
   resultsMeta.textContent  = `${responses.length} response${responses.length !== 1 ? 's' : ''}${filterDescription()}`;
+
+  const btnCopy = document.getElementById('btn-copy-responses');
+  btnCopy.onclick = () => {
+    const text = responses.map(r => String(r).trim()).join('\r\n');
+    navigator.clipboard.writeText(text).then(() => {
+      btnCopy.textContent = 'Copied!';
+      setTimeout(() => { btnCopy.textContent = 'Copy responses'; }, 2000);
+    });
+  };
 
   responseList.innerHTML = '';
   responses.forEach((text, i) => {
@@ -998,7 +1040,7 @@ document.getElementById('btn-export-pptx').addEventListener('click', () => {
   // Dark header bar
   slide.addShape(pptx.ShapeType.rect, {
     x: 0, y: 0, w: '100%', h: 1.1,
-    fill: { color: '1a3a5c' },
+    fill: { color: '3296c3' },
   });
 
   // Logo in header (logo is ~square: 499x500px, so w ≈ h)
