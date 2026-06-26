@@ -571,7 +571,7 @@ const CHART_FIELD_LABELS = {
   'Next Track: How to learn more': 'How would you prefer to learn more about Next Track options?',
   'Next Track: Most interested': 'Which Next Track paths are you most interested in learning more about?',
   'Wellness: Activities': 'What kind of wellness activities would you like us to offer next year?',
-  'wellness: connected': 'How connected do you feel to the Future 5 community through Health and Wellness activities?',
+  'Wellness: connected': 'How connected do you feel to the Future 5 community through Health and Wellness activities?',
   'Wellness: Participation': 'Did you participate in any Health & Wellness activities this year?',
   'Academics: More awareness': 'Which of the following would help you become more aware of our resources?',
   'College Success: self-learning': 'Compared to 1 year ago…',
@@ -720,7 +720,7 @@ function rebuildQuestionDropdown() {
       const prefix = field.includes(':') ? field.split(':')[0].trim() : 'Other';
       const group = { 'Academic': 'Academics', 'Academics': 'Academics', 'College Success': 'College Success',
                       'Community': 'Community', 'F5': 'Future 5', 'Goals': 'Goals',
-                      'Next Track': 'Next Track', 'Wellness': 'Wellness', 'wellness': 'Wellness',
+                      'Next Track': 'Next Track', 'Wellness': 'Wellness',
                       'Seniors': 'Seniors', 'Other': 'Other' }[prefix] || prefix;
       if (!groups[group]) groups[group] = [];
       groups[group].push({ field, label });
